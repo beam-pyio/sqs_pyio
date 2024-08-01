@@ -37,7 +37,6 @@ def receive_message(sqs_client, **kwargs):
 
 @mock_aws
 class TestBoto3Client(unittest.TestCase):
-    sqs_client = None
     queue_name = "test-sqs-queue"
 
     def setUp(self):
@@ -67,7 +66,9 @@ class TestBoto3Client(unittest.TestCase):
         messages = receive_message(
             self.sqs_client, queue_name=self.queue_name, max_msgs=3
         )["Messages"]
-        assert [r["Id"] for r in records] == [m["Body"] for m in messages]
+        assert set([r["MessageBody"] for r in records]) == set(
+            [m["Body"] for m in messages]
+        )
 
     def test_send_message_batch_with_unsupported_data_types(self):
         # Id should be a string
@@ -81,7 +82,7 @@ class TestBoto3Client(unittest.TestCase):
             SqsClientError, self.sqs_client.send_message_batch, records, self.queue_name
         )
 
-    def test_send_message_batch_with_unsupported_records_types(self):
+    def test_send_message_batch_with_unsupported_record_types(self):
         # only the list type is supported!
         self.assertRaises(
             TypeError, self.sqs_client.send_message_batch, {}, self.queue_name
