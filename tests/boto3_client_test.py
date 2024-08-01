@@ -69,7 +69,19 @@ class TestBoto3Client(unittest.TestCase):
         )["Messages"]
         assert [r["Id"] for r in records] == [m["Body"] for m in messages]
 
-    def test_send_message_batch_with_unsupported_types(self):
+    def test_send_message_batch_with_unsupported_data_types(self):
+        # Id should be a string
+        records = [{"Id": i, "MessageBody": str(i)} for i in range(3)]
+        self.assertRaises(
+            SqsClientError, self.sqs_client.send_message_batch, records, self.queue_name
+        )
+        # MessageBody should be a string
+        records = [{"Id": str(i), "MessageBody": i} for i in range(3)]
+        self.assertRaises(
+            SqsClientError, self.sqs_client.send_message_batch, records, self.queue_name
+        )
+
+    def test_send_message_batch_with_unsupported_records_types(self):
         # only the list type is supported!
         self.assertRaises(
             TypeError, self.sqs_client.send_message_batch, {}, self.queue_name
