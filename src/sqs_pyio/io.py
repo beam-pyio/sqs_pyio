@@ -19,7 +19,7 @@ import typing
 import apache_beam as beam
 from apache_beam.pvalue import PCollection
 
-from sqs_pyio.boto3_client import SqsClient
+from sqs_pyio.boto3_client import SqsClient, FakeSqsClient
 from sqs_pyio.options import SqsOptions
 
 __all__ = ["WriteToSqs"]
@@ -32,8 +32,8 @@ class _SqsWriteFn(beam.DoFn):
         records (list): Records to send into an Amazon SQS queue.
         queue_name (str): Queue name whose URL must be fetched.
         owner_acc_id (str): AWS account ID where the queue is created.
-        max_trials (int): Maximum number of trials to put failed records.
-        options (Union[FirehoseOptions, dict]): Options to create a boto3 Firehose client.
+        options (Union[SqsOptions, dict]): Options to create a boto3 SQS client.
+        fake_config (dict, optional): Config parameters when using FakeSqsClient for testing.
     """
 
     def __init__(
@@ -42,6 +42,7 @@ class _SqsWriteFn(beam.DoFn):
         owner_acc_id: str,
         max_trials: int,
         options: typing.Union[SqsOptions, dict],
+        fake_config: dict,
     ):
         """Constructor of _SqsWriteFn
 
@@ -50,24 +51,43 @@ class _SqsWriteFn(beam.DoFn):
             queue_name (str): Queue name whose URL must be fetched.
             owner_acc_id (str): AWS account ID where the queue is created.
             max_trials (int): Maximum number of trials to put failed records.
-            options (Union[FirehoseOptions, dict]): Options to create a boto3 Firehose client.
+            options (Union[SqsOptions, dict]): Options to create a boto3 SQS client.
+            fake_config (dict, optional): Config parameters when using FakeSqsClient for testing.
         """
         super().__init__()
         self.queue_name = queue_name
         self.owner_acc_id = owner_acc_id
         self.max_trials = max_trials
         self.options = options
+        self.fake_config = fake_config
 
     def start_bundle(self):
-        self.client = SqsClient(self.options)
+        if not self.fake_config:
+            self.client = SqsClient(self.options)
+        else:
+            self.client = FakeSqsClient(self.fake_config)
 
     def process(self, element):
         if isinstance(element, tuple):
             element = element[1]
-        responses = self.client.send_message_batch(
-            element, self.queue_name, self.owner_acc_id
-        )
-        return responses["Failed"]
+        loop, total, failed = 0, len(element), []
+        while loop < self.max_trials:
+            response = self.client.send_message_batch(
+                element, self.queue_name, self.owner_acc_id
+            )
+            failed = response["Failed"]
+            if len(failed) == 0 or (self.max_trials - loop == 1):
+                break
+            element = [e for e in element if e["Id"] in [r["Id"] for r in failed]]
+            failed = []
+            loop += 1
+        # append failure details
+        return [
+            {**z[0], **z[1]}
+            for z in zip(
+                [e for e in element if e["Id"] in [r["Id"] for r in failed]], failed
+            )
+        ]
 
     def finish_bundle(self):
         self.client.close()
@@ -85,23 +105,38 @@ class WriteToSqs(beam.PTransform):
         queue_name (str): Amazon SQS queue name.
         owner_acc_id (str, optional): AWS account ID where the queue is created. Defaults to None.
         max_trials (int): Maximum number of trials to put failed records. Defaults to 3.
+        fake_config (dict, optional): Config parameters when using FakeFirehoseClient for testing. Defaults to {}.
     """
 
-    def __init__(self, queue_name: str, owner_acc_id: str = None, max_trials: int = 3):
+    def __init__(
+        self,
+        queue_name: str,
+        owner_acc_id: str = None,
+        max_trials: int = 3,
+        fake_config: dict = {},
+    ):
         """Constructor of the transform that puts records into an Amazon Firehose delivery stream
 
         Args:
             queue_name (str): Amazon SQS queue name.
             owner_acc_id (str, optional): AWS account ID where the queue is created. Defaults to None.
             max_trials (int): Maximum number of trials to put failed records. Defaults to 3.
+            fake_config (dict, optional): Config parameters when using FakeFirehoseClient for testing. Defaults to {}.
         """
         super().__init__()
         self.queue_name = queue_name
         self.owner_acc_id = owner_acc_id
         self.max_trials = max_trials
+        self.fake_config = fake_config
 
     def expand(self, pcoll: PCollection):
         options = pcoll.pipeline.options.view_as(SqsOptions)
         return pcoll | beam.ParDo(
-            _SqsWriteFn(self.queue_name, self.owner_acc_id, self.max_trials, options)
+            _SqsWriteFn(
+                self.queue_name,
+                self.owner_acc_id,
+                self.max_trials,
+                options,
+                self.fake_config,
+            )
         )
