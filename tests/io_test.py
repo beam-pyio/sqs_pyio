@@ -164,3 +164,48 @@ class TestWriteToSqs(unittest.TestCase):
         assert set([r[1]["MessageBody"] for r in records]) == set(
             [m["Body"] for m in messages]
         )
+
+
+class TestRetryLogic(unittest.TestCase):
+    def test_write_to_sqs_retry_with_no_failed_element(self):
+        records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
+        with TestPipeline() as p:
+            output = (
+                p
+                | beam.Create(records)
+                | BatchElements(min_batch_size=4)
+                | WriteToSqs(
+                    queue_name="test-sqs-queue",
+                    max_trials=3,
+                    fake_config={"num_success": 2},
+                )
+            )
+            assert_that(output, equal_to([]))
+
+    def test_write_to_sqs_retry_with_failed_element(self):
+        records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
+        with TestPipeline() as p:
+            output = (
+                p
+                | beam.Create(records)
+                | BatchElements(min_batch_size=4)
+                | WriteToSqs(
+                    queue_name="test-sqs-queue",
+                    max_trials=3,
+                    fake_config={"num_success": 1},
+                )
+            )
+            assert_that(
+                output,
+                equal_to(
+                    [
+                        {
+                            "Id": "3",
+                            "MessageBody": "3",
+                            "SenderFault": False,
+                            "Code": "error-code",
+                            "Message": "error-message",
+                        }
+                    ]
+                ),
+            )

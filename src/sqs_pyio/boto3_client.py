@@ -136,3 +136,34 @@ class SqsClient(object):
     def close(self):
         """Closes underlying endpoint connections."""
         self.client.close()
+
+
+class FakeSqsClient:
+    def __init__(self, fake_config: dict):
+        self.num_success = fake_config.get("num_success", 0)
+
+    def get_queue_url(self, queue_name: str, owner_acc_id: str = None):
+        return "fake-queue-url"
+
+    def send_message_batch(
+        self, records: list, queue_name: str, owner_acc_id: str = None
+    ):
+        if not isinstance(records, list):
+            raise TypeError("Records should be a list.")
+        successful, failed = [], []
+        for index, record in enumerate(records):
+            if index < self.num_success:
+                successful.append({"Id": record["Id"]})
+            else:
+                failed.append(
+                    {
+                        "Id": record["Id"],
+                        "SenderFault": False,
+                        "Code": "error-code",
+                        "Message": "error-message",
+                    }
+                )
+        return {"Successful": successful, "Failed": failed}
+
+    def close(self):
+        return
