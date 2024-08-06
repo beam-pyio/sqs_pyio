@@ -80,7 +80,7 @@ class TestWriteToSqs(unittest.TestCase):
         # only the list type is supported!
         # fails because individual elements (dictionary) are sent to the process function
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(3)]
-        with self.assertRaises(TypeError):
+        with self.assertRaises(SqsClientError):
             with TestPipeline(options=self.pipeline_opts) as p:
                 (p | beam.Create(records) | WriteToSqs(queue_name=self.queue_name))
 
