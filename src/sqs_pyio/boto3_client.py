@@ -116,14 +116,13 @@ class SqsClient(object):
 
         Raises:
             SqsClientError: SQS client error.
-            TypeError: TypeError.
 
         Returns:
             (Object): Boto3 response message.
         """
 
         if not isinstance(records, list):
-            raise TypeError("Records should be a list.")
+            raise SqsClientError("Records should be a list.")
         try:
             queue_url = self.get_queue_url(queue_name, owner_acc_id)
             boto_response = self.client.send_message_batch(
@@ -149,7 +148,8 @@ class FakeSqsClient:
         self, records: list, queue_name: str, owner_acc_id: str = None
     ):
         if not isinstance(records, list):
-            raise TypeError("Records should be a list.")
+            raise SqsClientError("Records should be a list.")
+
         successful, failed = [], []
         for index, record in enumerate(records):
             if index < self.num_success:

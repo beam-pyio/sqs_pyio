@@ -19,6 +19,7 @@ import unittest
 from moto import mock_aws
 
 import apache_beam as beam
+from apache_beam.metrics.metric import MetricsFilter
 from apache_beam.transforms.util import BatchElements
 from apache_beam import GroupIntoBatches
 from apache_beam.options import pipeline_options
@@ -26,7 +27,7 @@ from apache_beam.testing.test_pipeline import TestPipeline
 from apache_beam.testing.util import assert_that, equal_to
 
 from sqs_pyio.boto3_client import SqsClient, SqsClientError
-from sqs_pyio.io import WriteToSqs
+from sqs_pyio.io import WriteToSqs, _SqsWriteFn
 
 
 def create_queue(sqs_client, **kwargs):
@@ -80,7 +81,7 @@ class TestWriteToSqs(unittest.TestCase):
         # only the list type is supported!
         # fails because individual elements (dictionary) are sent to the process function
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(3)]
-        with self.assertRaises(TypeError):
+        with self.assertRaises(SqsClientError):
             with TestPipeline(options=self.pipeline_opts) as p:
                 (p | beam.Create(records) | WriteToSqs(queue_name=self.queue_name))
 
@@ -167,7 +168,7 @@ class TestWriteToSqs(unittest.TestCase):
 
 
 class TestRetryLogic(unittest.TestCase):
-    def test_write_to_sqs_retry_with_no_failed_element(self):
+    def test_write_to_sqs_retry_no_failed_element(self):
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
         with TestPipeline() as p:
             output = (
@@ -177,12 +178,13 @@ class TestRetryLogic(unittest.TestCase):
                 | WriteToSqs(
                     queue_name="test-sqs-queue",
                     max_trials=3,
+                    append_error=True,
                     fake_config={"num_success": 2},
                 )
             )
             assert_that(output, equal_to([]))
 
-    def test_write_to_sqs_retry_with_failed_element(self):
+    def test_write_to_sqs_retry_failed_element_without_appending_error(self):
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
         with TestPipeline() as p:
             output = (
@@ -192,6 +194,26 @@ class TestRetryLogic(unittest.TestCase):
                 | WriteToSqs(
                     queue_name="test-sqs-queue",
                     max_trials=3,
+                    append_error=False,
+                    fake_config={"num_success": 1},
+                )
+            )
+            assert_that(
+                output,
+                equal_to([{"Id": "3", "MessageBody": "3"}]),
+            )
+
+    def test_write_to_sqs_retry_failed_element_with_appending_error(self):
+        records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
+        with TestPipeline() as p:
+            output = (
+                p
+                | beam.Create(records)
+                | BatchElements(min_batch_size=4)
+                | WriteToSqs(
+                    queue_name="test-sqs-queue",
+                    max_trials=3,
+                    append_error=True,
                     fake_config={"num_success": 1},
                 )
             )
@@ -202,10 +224,110 @@ class TestRetryLogic(unittest.TestCase):
                         {
                             "Id": "3",
                             "MessageBody": "3",
-                            "SenderFault": False,
-                            "Code": "error-code",
-                            "Message": "error-message",
+                            "error": {
+                                "Id": "3",
+                                "SenderFault": False,
+                                "Code": "error-code",
+                                "Message": "error-message",
+                            },
                         }
                     ]
                 ),
             )
+
+
+class TestMetrics(unittest.TestCase):
+    def test_metrics_with_no_failed_element(self):
+        records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
+
+        pipeline = TestPipeline()
+        output = (
+            pipeline
+            | beam.Create(records)
+            | BatchElements(min_batch_size=4)
+            | WriteToSqs(
+                queue_name="test-sqs-queue",
+                max_trials=3,
+                append_error=True,
+                fake_config={"num_success": 2},
+            )
+        )
+        assert_that(output, equal_to([]))
+
+        res = pipeline.run()
+        res.wait_until_finish()
+
+        ## verify total_elements_count
+        metric_results = res.metrics().query(
+            MetricsFilter().with_metric(_SqsWriteFn.total_elements_count)
+        )
+        total_elements_count = metric_results["counters"][0]
+        self.assertEqual(total_elements_count.key.metric.name, "total_elements_count")
+        self.assertEqual(total_elements_count.committed, 4)
+
+        ## verify succeeded_elements_count
+        metric_results = res.metrics().query(
+            MetricsFilter().with_metric(_SqsWriteFn.succeeded_elements_count)
+        )
+        succeeded_elements_count = metric_results["counters"][0]
+        self.assertEqual(
+            succeeded_elements_count.key.metric.name, "succeeded_elements_count"
+        )
+        self.assertEqual(succeeded_elements_count.committed, 4)
+
+        ## verify failed_elements_count
+        metric_results = res.metrics().query(
+            MetricsFilter().with_metric(_SqsWriteFn.failed_elements_count)
+        )
+        failed_elements_count = metric_results["counters"][0]
+        self.assertEqual(failed_elements_count.key.metric.name, "failed_elements_count")
+        self.assertEqual(failed_elements_count.committed, 0)
+
+    def test_metrics_with_failed_element(self):
+        records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
+
+        pipeline = TestPipeline()
+        output = (
+            pipeline
+            | beam.Create(records)
+            | BatchElements(min_batch_size=4)
+            | WriteToSqs(
+                queue_name="test-sqs-queue",
+                max_trials=3,
+                append_error=False,
+                fake_config={"num_success": 1},
+            )
+        )
+        assert_that(
+            output,
+            equal_to([{"Id": "3", "MessageBody": "3"}]),
+        )
+
+        res = pipeline.run()
+        res.wait_until_finish()
+
+        ## verify total_elements_count
+        metric_results = res.metrics().query(
+            MetricsFilter().with_metric(_SqsWriteFn.total_elements_count)
+        )
+        total_elements_count = metric_results["counters"][0]
+        self.assertEqual(total_elements_count.key.metric.name, "total_elements_count")
+        self.assertEqual(total_elements_count.committed, 4)
+
+        ## verify succeeded_elements_count
+        metric_results = res.metrics().query(
+            MetricsFilter().with_metric(_SqsWriteFn.succeeded_elements_count)
+        )
+        succeeded_elements_count = metric_results["counters"][0]
+        self.assertEqual(
+            succeeded_elements_count.key.metric.name, "succeeded_elements_count"
+        )
+        self.assertEqual(succeeded_elements_count.committed, 3)
+
+        ## verify failed_elements_count
+        metric_results = res.metrics().query(
+            MetricsFilter().with_metric(_SqsWriteFn.failed_elements_count)
+        )
+        failed_elements_count = metric_results["counters"][0]
+        self.assertEqual(failed_elements_count.key.metric.name, "failed_elements_count")
+        self.assertEqual(failed_elements_count.committed, 1)

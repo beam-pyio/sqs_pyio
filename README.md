@@ -3,8 +3,8 @@
 ![doc](https://github.com/beam-pyio/sqs_pyio/workflows/doc/badge.svg)
 ![test](https://github.com/beam-pyio/sqs_pyio/workflows/test/badge.svg)
 [![release](https://img.shields.io/github/release/beam-pyio/sqs_pyio.svg)](https://github.com/beam-pyio/sqs_pyio/releases)
-![python](https://img.shields.io/badge/python-3.8%2C%203.9%2C%203.10%2C%203.11%2C%203.12-blue)
-![os](https://img.shields.io/badge/OS-Ubuntu%2C%20Mac%2C%20Windows-purple)
+![pypi](https://img.shields.io/pypi/v/sqs_pyio)
+![python](https://img.shields.io/pypi/pyversions/sqs_pyio)
 
 Apache Beam Python I/O connector for Amazon SQS
 

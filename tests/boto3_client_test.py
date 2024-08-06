@@ -85,11 +85,11 @@ class TestBoto3Client(unittest.TestCase):
     def test_send_message_batch_with_unsupported_record_types(self):
         # only the list type is supported!
         self.assertRaises(
-            TypeError, self.sqs_client.send_message_batch, {}, self.queue_name
+            SqsClientError, self.sqs_client.send_message_batch, {}, self.queue_name
         )
 
         self.assertRaises(
-            TypeError, self.sqs_client.send_message_batch, "abc", self.queue_name
+            SqsClientError, self.sqs_client.send_message_batch, "abc", self.queue_name
         )
 
     def test_send_message_batch_without_mandatory_attributes(self):
