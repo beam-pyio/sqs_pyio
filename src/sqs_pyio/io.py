@@ -17,6 +17,7 @@
 
 import typing
 import apache_beam as beam
+from apache_beam import metrics
 from apache_beam.pvalue import PCollection
 
 from sqs_pyio.boto3_client import SqsClient, FakeSqsClient
@@ -35,6 +36,16 @@ class _SqsWriteFn(beam.DoFn):
         options (Union[SqsOptions, dict]): Options to create a boto3 SQS client.
         fake_config (dict, optional): Config parameters when using FakeSqsClient for testing.
     """
+
+    total_elements_count = metrics.Metrics.counter(
+        "_SqsWriteFn", "total_elements_count"
+    )
+    succeeded_elements_count = metrics.Metrics.counter(
+        "_SqsWriteFn", "succeeded_elements_count"
+    )
+    failed_elements_count = metrics.Metrics.counter(
+        "_SqsWriteFn", "failed_elements_count"
+    )
 
     def __init__(
         self,
@@ -84,6 +95,9 @@ class _SqsWriteFn(beam.DoFn):
             element = [e for e in element if e["Id"] in [r["Id"] for r in failed]]
             failed = []
             loop += 1
+        self.total_elements_count.inc(total)
+        self.succeeded_elements_count.inc(total - len(failed))
+        self.failed_elements_count.inc(len(failed))
         if self.append_error:
             return [
                 {**z[0], "error": z[1]}
