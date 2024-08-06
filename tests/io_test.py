@@ -167,7 +167,7 @@ class TestWriteToSqs(unittest.TestCase):
 
 
 class TestRetryLogic(unittest.TestCase):
-    def test_write_to_sqs_retry_with_no_failed_element(self):
+    def test_write_to_sqs_retry_no_failed_element(self):
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
         with TestPipeline() as p:
             output = (
@@ -182,7 +182,7 @@ class TestRetryLogic(unittest.TestCase):
             )
             assert_that(output, equal_to([]))
 
-    def test_write_to_sqs_retry_with_failed_element(self):
+    def test_write_to_sqs_retry_failed_element_without_appending_error(self):
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
         with TestPipeline() as p:
             output = (
@@ -193,6 +193,26 @@ class TestRetryLogic(unittest.TestCase):
                     queue_name="test-sqs-queue",
                     max_trials=3,
                     fake_config={"num_success": 1},
+                    append_error=False,
+                )
+            )
+            assert_that(
+                output,
+                equal_to([{"Id": "3", "MessageBody": "3"}]),
+            )
+
+    def test_write_to_sqs_retry_failed_element_with_appending_error(self):
+        records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
+        with TestPipeline() as p:
+            output = (
+                p
+                | beam.Create(records)
+                | BatchElements(min_batch_size=4)
+                | WriteToSqs(
+                    queue_name="test-sqs-queue",
+                    max_trials=3,
+                    fake_config={"num_success": 1},
+                    append_error=True,
                 )
             )
             assert_that(
@@ -202,9 +222,12 @@ class TestRetryLogic(unittest.TestCase):
                         {
                             "Id": "3",
                             "MessageBody": "3",
-                            "SenderFault": False,
-                            "Code": "error-code",
-                            "Message": "error-message",
+                            "error": {
+                                "Id": "3",
+                                "SenderFault": False,
+                                "Code": "error-code",
+                                "Message": "error-message",
+                            },
                         }
                     ]
                 ),
