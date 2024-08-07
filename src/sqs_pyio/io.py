@@ -18,7 +18,7 @@
 import typing
 import apache_beam as beam
 from apache_beam import metrics
-from apache_beam.pvalue import PCollection
+from apache_beam.pvalue import PCollection, TaggedOutput
 
 from sqs_pyio.boto3_client import SqsClient, FakeSqsClient
 from sqs_pyio.options import SqsOptions
@@ -33,6 +33,9 @@ class _SqsWriteFn(beam.DoFn):
         records (list): Records to send into an Amazon SQS queue.
         queue_name (str): Queue name whose URL must be fetched.
         owner_acc_id (str): AWS account ID where the queue is created.
+        max_trials (int): Maximum number of trials to put failed records.
+        append_error (bool): Whether to append error details to failed records.
+        failed_output (str): A tagged output name where failed records are written to.
         options (Union[SqsOptions, dict]): Options to create a boto3 SQS client.
         fake_config (dict, optional): Config parameters when using FakeSqsClient for testing.
     """
@@ -53,6 +56,7 @@ class _SqsWriteFn(beam.DoFn):
         owner_acc_id: str,
         max_trials: int,
         append_error: bool,
+        failed_output: str,
         options: typing.Union[SqsOptions, dict],
         fake_config: dict,
     ):
@@ -64,14 +68,16 @@ class _SqsWriteFn(beam.DoFn):
             owner_acc_id (str): AWS account ID where the queue is created.
             max_trials (int): Maximum number of trials to put failed records.
             append_error (bool): Whether to append error details to failed records.
+            failed_output (str): A tagged output name where failed records are written to.
             options (Union[SqsOptions, dict]): Options to create a boto3 SQS client.
-            fake_config (dict, optional): Config parameters when using FakeSqsClient for testing.
+            fake_config (dict): Config parameters when using FakeSqsClient for testing.
         """
         super().__init__()
         self.queue_name = queue_name
         self.owner_acc_id = owner_acc_id
         self.max_trials = max_trials
         self.append_error = append_error
+        self.failed_output = failed_output
         self.options = options
         self.fake_config = fake_config
 
@@ -98,15 +104,16 @@ class _SqsWriteFn(beam.DoFn):
         self.total_elements_count.inc(total)
         self.succeeded_elements_count.inc(total - len(failed))
         self.failed_elements_count.inc(len(failed))
-        if self.append_error:
-            return [
-                {**z[0], "error": z[1]}
-                for z in zip(
-                    [e for e in element if e["Id"] in [r["Id"] for r in failed]], failed
-                )
+        if len(failed) > 0:
+            failed_records = [
+                e for e in element if e["Id"] in [r["Id"] for r in failed]
             ]
-        else:
-            return [e for e in element if e["Id"] in [r["Id"] for r in failed]]
+            if self.append_error:
+                failed_records = [
+                    {**z[0], "error": z[1]} for z in zip(failed_records, failed)
+                ]
+            for r in failed_records:
+                yield TaggedOutput(self.failed_output, r)
 
     def finish_bundle(self):
         self.client.close()
@@ -125,6 +132,7 @@ class WriteToSqs(beam.PTransform):
         owner_acc_id (str, optional): AWS account ID where the queue is created. Defaults to None.
         max_trials (int, optional): Maximum number of trials to put failed records. Defaults to 3.
         append_error (bool, optional): Whether to append error details to failed records. Defaults to True.
+        failed_output (str, optional): A tagged output name where failed records are written to. Defaults to 'write-to-sqs-failed-output'.
         fake_config (dict, optional): Config parameters when using FakeFirehoseClient for testing. Defaults to {}.
     """
 
@@ -134,6 +142,7 @@ class WriteToSqs(beam.PTransform):
         owner_acc_id: str = None,
         max_trials: int = 3,
         append_error: bool = True,
+        failed_output: str = "write-to-sqs-failed-output",
         fake_config: dict = {},
     ):
         """Constructor of the transform that puts records into an Amazon Firehose delivery stream
@@ -143,6 +152,7 @@ class WriteToSqs(beam.PTransform):
             owner_acc_id (str, optional): AWS account ID where the queue is created. Defaults to None.
             max_trials (int, optional): Maximum number of trials to put failed records. Defaults to 3.
             append_error (bool, optional): Whether to append error details to failed records. Defaults to True.
+            failed_output (str, optional): A tagged output name where failed records are written to. Defaults to 'write-to-sqs-failed-output'.
             fake_config (dict, optional): Config parameters when using FakeFirehoseClient for testing. Defaults to {}.
         """
         super().__init__()
@@ -150,6 +160,7 @@ class WriteToSqs(beam.PTransform):
         self.owner_acc_id = owner_acc_id
         self.max_trials = max_trials
         self.append_error = append_error
+        self.failed_output = failed_output
         self.fake_config = fake_config
 
     def expand(self, pcoll: PCollection):
@@ -160,7 +171,8 @@ class WriteToSqs(beam.PTransform):
                 self.owner_acc_id,
                 self.max_trials,
                 self.append_error,
+                self.failed_output,
                 options,
                 self.fake_config,
             )
-        )
+        ).with_outputs(self.failed_output, main=None)

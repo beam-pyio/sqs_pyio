@@ -89,7 +89,7 @@ class TestWriteToSqs(unittest.TestCase):
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(3)]
         with TestPipeline(options=self.pipeline_opts) as p:
             output = p | beam.Create([records]) | WriteToSqs(queue_name=self.queue_name)
-            assert_that(output, equal_to([]))
+            assert_that(output[None], equal_to([]))
 
         messages = receive_message(
             self.sqs_client, queue_name=self.queue_name, max_msgs=3
@@ -106,7 +106,7 @@ class TestWriteToSqs(unittest.TestCase):
                 | beam.Create([("key", records)])
                 | WriteToSqs(queue_name=self.queue_name)
             )
-            assert_that(output, equal_to([]))
+            assert_that(output[None], equal_to([]))
 
         messages = receive_message(
             self.sqs_client, queue_name=self.queue_name, max_msgs=3
@@ -138,7 +138,7 @@ class TestWriteToSqs(unittest.TestCase):
                 | BatchElements(min_batch_size=2, max_batch_size=2)
                 | WriteToSqs(queue_name=self.queue_name)
             )
-            assert_that(output, equal_to([]))
+            assert_that(output[None], equal_to([]))
 
         messages = receive_message(
             self.sqs_client, queue_name=self.queue_name, max_msgs=3
@@ -157,7 +157,7 @@ class TestWriteToSqs(unittest.TestCase):
                 | GroupIntoBatches(batch_size=2)
                 | WriteToSqs(queue_name=self.queue_name)
             )
-            assert_that(output, equal_to([]))
+            assert_that(output[None], equal_to([]))
 
         messages = receive_message(
             self.sqs_client, queue_name=self.queue_name, max_msgs=3
@@ -180,6 +180,9 @@ class TestWriteToSqs(unittest.TestCase):
 
 
 class TestRetryLogic(unittest.TestCase):
+    # default failed output name
+    failed_output = "write-to-sqs-failed-output"
+
     def test_write_to_sqs_retry_no_failed_element(self):
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
         with TestPipeline() as p:
@@ -194,7 +197,7 @@ class TestRetryLogic(unittest.TestCase):
                     fake_config={"num_success": 2},
                 )
             )
-            assert_that(output, equal_to([]))
+            assert_that(output[None], equal_to([]))
 
     def test_write_to_sqs_retry_failed_element_without_appending_error(self):
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
@@ -210,8 +213,9 @@ class TestRetryLogic(unittest.TestCase):
                     fake_config={"num_success": 1},
                 )
             )
+
             assert_that(
-                output,
+                output[self.failed_output],
                 equal_to([{"Id": "3", "MessageBody": "3"}]),
             )
 
@@ -230,7 +234,7 @@ class TestRetryLogic(unittest.TestCase):
                 )
             )
             assert_that(
-                output,
+                output[self.failed_output],
                 equal_to(
                     [
                         {
@@ -249,6 +253,9 @@ class TestRetryLogic(unittest.TestCase):
 
 
 class TestMetrics(unittest.TestCase):
+    # default failed output name
+    failed_output = "write-to-sqs-failed-output"
+
     def test_metrics_with_no_failed_element(self):
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(4)]
 
@@ -264,7 +271,7 @@ class TestMetrics(unittest.TestCase):
                 fake_config={"num_success": 2},
             )
         )
-        assert_that(output, equal_to([]))
+        assert_that(output[None], equal_to([]))
 
         res = pipeline.run()
         res.wait_until_finish()
@@ -311,7 +318,7 @@ class TestMetrics(unittest.TestCase):
             )
         )
         assert_that(
-            output,
+            output[self.failed_output],
             equal_to([{"Id": "3", "MessageBody": "3"}]),
         )
 
