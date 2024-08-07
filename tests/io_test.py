@@ -166,6 +166,18 @@ class TestWriteToSqs(unittest.TestCase):
             [m["Body"] for m in messages]
         )
 
+    def test_write_to_sqs_with_too_many_elements(self):
+        # BatchElements groups unkeyed elements into a list
+        records = [{"Id": str(i), "MessageBody": str(i)} for i in range(100)]
+        with self.assertRaises(SqsClientError):
+            with TestPipeline(options=self.pipeline_opts) as p:
+                (
+                    p
+                    | beam.Create(records)
+                    | BatchElements(min_batch_size=50)
+                    | WriteToSqs(queue_name=self.queue_name)
+                )
+
 
 class TestRetryLogic(unittest.TestCase):
     def test_write_to_sqs_retry_no_failed_element(self):
