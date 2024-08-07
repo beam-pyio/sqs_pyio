@@ -89,7 +89,7 @@ class _SqsWriteFn(beam.DoFn):
             response = self.client.send_message_batch(
                 element, self.queue_name, self.owner_acc_id
             )
-            failed = response["Failed"]
+            failed = response.get("Failed", [])
             if len(failed) == 0 or (self.max_trials - loop == 1):
                 break
             element = [e for e in element if e["Id"] in [r["Id"] for r in failed]]
