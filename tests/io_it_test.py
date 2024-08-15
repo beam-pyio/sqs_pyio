@@ -11,7 +11,6 @@ from apache_beam.testing.util import assert_that, equal_to
 from localstack_utils.localstack import startup_localstack, stop_localstack
 
 from sqs_pyio.io import WriteToSqs
-from sqs_pyio.boto3_client import SqsClientError
 
 
 def create_client(service_name):
@@ -81,7 +80,7 @@ class TestWriteToFirehose(unittest.TestCase):
                 | BatchElements(min_batch_size=2, max_batch_size=2)
                 | WriteToSqs(queue_name=self.queue_name)
             )
-            assert_that(output, equal_to([]))
+            assert_that(output[None], equal_to([]))
 
         messages = receive_message(queue_name=self.queue_name, max_msgs=3)["Messages"]
         assert set([r["MessageBody"] for r in records]) == set(
@@ -98,7 +97,7 @@ class TestWriteToFirehose(unittest.TestCase):
                 | GroupIntoBatches(batch_size=2)
                 | WriteToSqs(queue_name=self.queue_name)
             )
-            assert_that(output, equal_to([]))
+            assert_that(output[None], equal_to([]))
 
         messages = receive_message(queue_name=self.queue_name, max_msgs=3)["Messages"]
         assert set([r[1]["MessageBody"] for r in records]) == set(
