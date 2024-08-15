@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import logging
 import typing
 import apache_beam as beam
 from apache_beam import metrics
@@ -104,6 +105,9 @@ class _SqsWriteFn(beam.DoFn):
         self.total_elements_count.inc(total)
         self.succeeded_elements_count.inc(total - len(failed))
         self.failed_elements_count.inc(len(failed))
+        logging.info(
+            f"total {total}, succeeded {total - len(failed)}, failed {len(failed)}..."
+        )
         if len(failed) > 0:
             failed_records = [
                 e for e in element if e["Id"] in [r["Id"] for r in failed]
