@@ -237,16 +237,15 @@ class TestRetryLogic(unittest.TestCase):
                 output[self.failed_output],
                 equal_to(
                     [
-                        {
-                            "Id": "3",
-                            "MessageBody": "3",
-                            "error": {
+                        (
+                            {"Id": "3", "MessageBody": "3"},
+                            {
                                 "Id": "3",
                                 "SenderFault": False,
                                 "Code": "error-code",
                                 "Message": "error-message",
                             },
-                        }
+                        ),
                     ]
                 ),
             )

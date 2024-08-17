@@ -113,9 +113,7 @@ class _SqsWriteFn(beam.DoFn):
                 e for e in element if e["Id"] in [r["Id"] for r in failed]
             ]
             if self.append_error:
-                failed_records = [
-                    {**z[0], "error": z[1]} for z in zip(failed_records, failed)
-                ]
+                failed_records = zip(failed_records, failed)
             for r in failed_records:
                 yield TaggedOutput(self.failed_output, r)
 
