@@ -6,7 +6,7 @@
 ![pypi](https://img.shields.io/pypi/v/sqs_pyio)
 ![python](https://img.shields.io/pypi/pyversions/sqs_pyio)
 
-[Amazon Simple Queue Service (Amazon SQS)](https://aws.amazon.com/sqs/) offers a secure, durable, and available hosted queue that lets you integrate and decouple distributed software systems and components. The Apache Beam Python I/O connector for Amazon SQS (`sqs_pyio`) aims to integrate with the queue service by supporting a source and sinke connectors. Currently a sink connector is available.
+[Amazon Simple Queue Service (Amazon SQS)](https://aws.amazon.com/sqs/) offers a secure, durable, and available hosted queue that lets you integrate and decouple distributed software systems and components. The Apache Beam Python I/O connector for Amazon SQS (`sqs_pyio`) aims to integrate with the queue service by supporting a source and sink connectors. Currently, a sink connector is available.
 
 ## Installation
 
@@ -22,7 +22,7 @@ pip install sqs_pyio
 
 It has the main composite transform ([`WriteToSqs`](https://beam-pyio.github.io/sqs_pyio/autoapi/sqs_pyio/io/index.html#sqs_pyio.io.WriteToSqs)), and it expects a list or tuple _PCollection_ element. If the element is a tuple, the tuple's first element is taken. If the element is not of the accepted types, you can apply the [`GroupIntoBatches`](https://beam.apache.org/documentation/transforms/python/aggregation/groupintobatches/) or [`BatchElements`](https://beam.apache.org/releases/pydoc/current/apache_beam.transforms.util.html#apache_beam.transforms.util.BatchElements) transform beforehand. Then, the element is sent into a SQS queue using the [`send_message_batch`](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/send_message_batch.html) method of the boto3 package. Note that the above batch transforms can also be useful to overcome the API limitation listed below.
 
-- Each `SendMessageBatch` request supports up to 10 messages. The maximum allowed individual message size and the maximum total payload size (the sum of the individual lengths of all of the batched messages) are both 256 KiB (262,144 bytes).
+- Each `SendMessageBatch` request supports up to 10 messages. The maximum allowed individual message size and the maximum total payload size (the sum of the individual lengths of all the batched messages) are both 256 KiB (262,144 bytes).
 
 The transform also has options that handle failed records as listed below.
 
