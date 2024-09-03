@@ -1,0 +1,27 @@
+sqs_pyio.options
+================
+
+.. py:module:: sqs_pyio.options
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   sqs_pyio.options.SqsOptions
+
+
+Module Contents
+---------------
+
+.. py:class:: SqsOptions
+
+   Bases: :py:obj:`apache_beam.options.pipeline_options.PipelineOptions`
+
+
+   .. py:method:: _add_argparse_args(parser)
+      :classmethod:
+
+
+

@@ -1,0 +1,64 @@
+sqs_pyio.io
+===========
+
+.. py:module:: sqs_pyio.io
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   sqs_pyio.io.WriteToSqs
+
+
+Module Contents
+---------------
+
+.. py:class:: WriteToSqs(queue_name: str, owner_acc_id: str = None, max_trials: int = 3, append_error: bool = True, failed_output: str = 'write-to-sqs-failed-output', fake_config: dict = {})
+
+   Bases: :py:obj:`apache_beam.PTransform`
+
+
+   A transform that sends messages in batch into an Amazon SQS queue.
+
+   Takes an input PCollection and put them in batch using the boto3 package.
+   For more information, visit the `Boto3 Documentation <https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sqs/client/send_message_batch.html>`__.
+
+   Note that, if the PCollection element is a tuple (i.e. keyed stream), only the value is used to send messages in batch.
+
+   :param queue_name: Amazon SQS queue name.
+   :type queue_name: str
+   :param owner_acc_id: AWS account ID where the queue is created. Defaults to None.
+   :type owner_acc_id: str, optional
+   :param max_trials: Maximum number of trials to put failed records. Defaults to 3.
+   :type max_trials: int, optional
+   :param append_error: Whether to append error details to failed records. Defaults to True.
+   :type append_error: bool, optional
+   :param failed_output: A tagged output name where failed records are written to. Defaults to 'write-to-sqs-failed-output'.
+   :type failed_output: str, optional
+   :param fake_config: Config parameters when using FakeFirehoseClient for testing. Defaults to {}.
+   :type fake_config: dict, optional
+
+
+   .. py:attribute:: queue_name
+
+
+   .. py:attribute:: owner_acc_id
+
+
+   .. py:attribute:: max_trials
+
+
+   .. py:attribute:: append_error
+
+
+   .. py:attribute:: failed_output
+
+
+   .. py:attribute:: fake_config
+
+
+   .. py:method:: expand(pcoll: apache_beam.pvalue.PCollection)
+
+

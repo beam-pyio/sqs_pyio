@@ -1,0 +1,30 @@
+sqs_pyio
+========
+
+.. py:module:: sqs_pyio
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/sqs_pyio/boto3_client/index
+   /autoapi/sqs_pyio/io/index
+   /autoapi/sqs_pyio/options/index
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   sqs_pyio.__version__
+
+
+Package Contents
+----------------
+
+.. py:data:: __version__
+

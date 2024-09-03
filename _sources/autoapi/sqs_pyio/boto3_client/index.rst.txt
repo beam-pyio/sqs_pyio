@@ -1,0 +1,93 @@
+sqs_pyio.boto3_client
+=====================
+
+.. py:module:: sqs_pyio.boto3_client
+
+
+Exceptions
+----------
+
+.. autoapisummary::
+
+   sqs_pyio.boto3_client.SqsClientError
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   sqs_pyio.boto3_client.SqsClient
+
+
+Module Contents
+---------------
+
+.. py:exception:: SqsClientError(message=None, code=None)
+
+   Bases: :py:obj:`Exception`
+
+
+   Common base class for all non-exit exceptions.
+
+
+   .. py:attribute:: message
+
+
+   .. py:attribute:: code
+
+
+.. py:class:: SqsClient(options: Union[sqs_pyio.options.SqsOptions, dict])
+
+   Bases: :py:obj:`object`
+
+
+   Wrapper for boto3 library.
+
+
+   .. py:attribute:: session
+
+
+   .. py:attribute:: client
+
+
+   .. py:method:: get_queue_url(queue_name: str, owner_acc_id: str = None)
+
+      Returns the URL of an Amazon SQS queue
+
+      :param queue_name: Queue name whose URL must be fetched.
+      :type queue_name: str
+      :param owner_acc_id: AWS account ID where the queue is created. Defaults to None.
+      :type owner_acc_id: str, optional
+
+      :raises SqsClientError: SQS client error.
+
+      :returns: URL of the queue.
+      :rtype: (str)
+
+
+
+   .. py:method:: send_message_batch(records: list, queue_name: str, owner_acc_id: str = None)
+
+      Send messages to an Amazon SQS queue in batch.
+
+      :param records: Records to send into an Amazon SQS queue.
+      :type records: list
+      :param queue_name: Queue name whose URL must be fetched.
+      :type queue_name: str
+      :param owner_acc_id: AWS account ID where the queue is created. Defaults to None.
+      :type owner_acc_id: str, optional
+
+      :raises SqsClientError: SQS client error.
+
+      :returns: Boto3 response message.
+      :rtype: (Object)
+
+
+
+   .. py:method:: close()
+
+      Closes underlying endpoint connections.
+
+
+
