@@ -111,11 +111,11 @@ class TestBoto3Client(unittest.TestCase):
         )
 
     def test_send_message_batch_exceeding_max_batch_size(self):
-        # Id and MessageBody are mandatory message attributes
-        without_ids = [{"MessageBody": str(i)} for i in range(11)]
+        # number of records should be at most 10
+        records = [{"Id": str(i), "MessageBody": str(i)} for i in range(11)]
         self.assertRaises(
             SqsClientError,
             self.sqs_client.send_message_batch,
-            without_ids,
+            records,
             self.queue_name,
         )

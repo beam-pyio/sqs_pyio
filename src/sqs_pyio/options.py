@@ -21,7 +21,7 @@ from apache_beam.options.pipeline_options import PipelineOptions
 class SqsOptions(PipelineOptions):
     @classmethod
     def _add_argparse_args(cls, parser):
-        # These options are passed to the Firehose PyIO Client
+        # These options are passed to the SQS PyIO Client
         parser.add_argument(
             "--aws_access_key_id",
             default=None,

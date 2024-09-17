@@ -37,7 +37,7 @@ def receive_message(**kwargs):
 
 
 @pytest.mark.integration
-class TestWriteToFirehose(unittest.TestCase):
+class TestWriteToSqs(unittest.TestCase):
     queue_name = "test-sqs-queue"
 
     def setUp(self):
