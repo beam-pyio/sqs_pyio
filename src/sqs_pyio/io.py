@@ -31,7 +31,6 @@ class _SqsWriteFn(beam.DoFn):
     """Create the connector can send messages in batch to an Amazon SQS queue.
 
     Args:
-        records (list): Records to send into an Amazon SQS queue.
         queue_name (str): Queue name whose URL must be fetched.
         owner_acc_id (str): AWS account ID where the queue is created.
         max_trials (int): Maximum number of trials to put failed records.
@@ -64,7 +63,6 @@ class _SqsWriteFn(beam.DoFn):
         """Constructor of _SqsWriteFn
 
         Args:
-            records (list): Records to send into an Amazon SQS queue.
             queue_name (str): Queue name whose URL must be fetched.
             owner_acc_id (str): AWS account ID where the queue is created.
             max_trials (int): Maximum number of trials to put failed records.
