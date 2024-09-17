@@ -111,7 +111,6 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create the connector can send messages in batch to an Amazon SQS queue.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        records (list): Records to send into an Amazon SQS queue.</span>
 <span class="sd">        queue_name (str): Queue name whose URL must be fetched.</span>
 <span class="sd">        owner_acc_id (str): AWS account ID where the queue is created.</span>
 <span class="sd">        max_trials (int): Maximum number of trials to put failed records.</span>
@@ -144,7 +143,6 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructor of _SqsWriteFn</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            records (list): Records to send into an Amazon SQS queue.</span>
 <span class="sd">            queue_name (str): Queue name whose URL must be fetched.</span>
 <span class="sd">            owner_acc_id (str): AWS account ID where the queue is created.</span>
 <span class="sd">            max_trials (int): Maximum number of trials to put failed records.</span>
@@ -217,7 +215,7 @@
 <span class="sd">        max_trials (int, optional): Maximum number of trials to put failed records. Defaults to 3.</span>
 <span class="sd">        append_error (bool, optional): Whether to append error details to failed records. Defaults to True.</span>
 <span class="sd">        failed_output (str, optional): A tagged output name where failed records are written to. Defaults to &#39;write-to-sqs-failed-output&#39;.</span>
-<span class="sd">        fake_config (dict, optional): Config parameters when using FakeFirehoseClient for testing. Defaults to {}.</span>
+<span class="sd">        fake_config (dict, optional): Config parameters when using FakeSqsClient for testing. Defaults to {}.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
@@ -229,7 +227,7 @@
         <span class="n">failed_output</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;write-to-sqs-failed-output&quot;</span><span class="p">,</span>
         <span class="n">fake_config</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{},</span>
     <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructor of the transform that puts records into an Amazon Firehose delivery stream</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructor of the transform that puts records into an Amazon SQS queue</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            queue_name (str): Amazon SQS queue name.</span>
@@ -237,7 +235,7 @@
 <span class="sd">            max_trials (int, optional): Maximum number of trials to put failed records. Defaults to 3.</span>
 <span class="sd">            append_error (bool, optional): Whether to append error details to failed records. Defaults to True.</span>
 <span class="sd">            failed_output (str, optional): A tagged output name where failed records are written to. Defaults to &#39;write-to-sqs-failed-output&#39;.</span>
-<span class="sd">            fake_config (dict, optional): Config parameters when using FakeFirehoseClient for testing. Defaults to {}.</span>
+<span class="sd">            fake_config (dict, optional): Config parameters when using FakeSqsClient for testing. Defaults to {}.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 <div class="viewcode-block" id="WriteToSqs.queue_name">

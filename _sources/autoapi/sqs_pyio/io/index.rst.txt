@@ -37,7 +37,7 @@ Module Contents
    :type append_error: bool, optional
    :param failed_output: A tagged output name where failed records are written to. Defaults to 'write-to-sqs-failed-output'.
    :type failed_output: str, optional
-   :param fake_config: Config parameters when using FakeFirehoseClient for testing. Defaults to {}.
+   :param fake_config: Config parameters when using FakeSqsClient for testing. Defaults to {}.
    :type fake_config: dict, optional
 
 
