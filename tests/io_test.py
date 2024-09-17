@@ -78,7 +78,7 @@ class TestWriteToSqs(unittest.TestCase):
                 )
 
     def test_write_to_sqs_with_unsupported_record_type(self):
-        # only the list type is supported!
+        # supported types are list or tuple where the second element is a list!
         # fails because individual elements (dictionary) are sent to the process function
         records = [{"Id": str(i), "MessageBody": str(i)} for i in range(3)]
         with self.assertRaises(SqsClientError):
