@@ -32,22 +32,6 @@ from sqs_pyio.io import WriteToSqs
 QUEUE_NAME = "sqs-pyio-test"
 
 
-def split_into_chunks(max_num, size=10):
-    lst = list(range(max_num))
-    for i in range(0, max_num, size):
-        yield lst[i : i + size]
-
-
-def send_message_batch(queue_name, max_num):
-    client = boto3.client("sqs")
-    queue_url = get_queue_url(queue_name)
-    chunks = split_into_chunks(max_num)
-    for chunk in chunks:
-        print(f"sending {len(chunk)} messages...")
-        records = [{"Id": str(i), "MessageBody": str(i)} for i in chunk]
-        client.send_message_batch(QueueUrl=queue_url, Entries=records)
-
-
 def get_queue_url(queue_name):
     client = boto3.client("sqs")
     try:
