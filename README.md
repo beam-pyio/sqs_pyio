@@ -69,7 +69,7 @@ with beam.Pipeline() as p:
     )
 ```
 
-See [this post](https://beam-pyio.github.io/blog/2024/sqs-pyio-intro/) for more examples.
+See [Introduction to SQS PyIO Sink Connector](/blog/2024/sqs-pyio-intro/) for more examples.
 
 ## Contributing
 
